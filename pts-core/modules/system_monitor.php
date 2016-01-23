@@ -709,7 +709,7 @@ class system_monitor extends pts_module_interface
 			$sensor_results = self::parse_monitor_log('logs/' . phodevi::sensor_object_identifier($sensor),
 								$start_offset, $end_offset);
 
-			if(count($sensor_results) > 2)
+			if(count($sensor_results) > 0)
 			{
 				$result_identifier = self::$result_identifier . " (try " . ($try_number) . ")";
 				$result_value = implode(',', $sensor_results);
