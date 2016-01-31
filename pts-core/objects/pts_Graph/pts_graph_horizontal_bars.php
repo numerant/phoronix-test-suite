@@ -28,6 +28,8 @@ class pts_graph_horizontal_bars extends pts_graph_core
 		$this->i['iveland_view'] = true;
 		$this->i['graph_orientation'] = 'HORIZONTAL';
 		$this->i['identifier_height'] = -1;
+		$this->i['graph_width'] = 650;
+		$this->i['graph_max_value_multiplier'] = 1.1;
 	}
 	protected function render_graph_pre_init()
 	{
@@ -131,22 +133,30 @@ class pts_graph_horizontal_bars extends pts_graph_core
 				$px_bound_bottom = $px_bound_top + $bar_height;
 				$middle_of_bar = $px_bound_top + ($bar_height / 2) + ($this->i['identifier_size'] - 4);
 				$title_tooltip = $buffer_item->get_result_identifier() . ': ' . $value;
+				$text_min_max = '';
 
 				$std_error = -1;
+				$std_dev = -1;
 				if(($raw_values = $buffer_item->get_result_raw()))
 				{
-					$std_error = pts_strings::colon_explode($raw_values);
+					$values = pts_strings::colon_explode($raw_values);
+					$minval = min($values);
+					$maxval = max($values);
+					$text_min_max = '(' . pts_math::set_precision($minval, 2) . " ~ " . pts_math::set_precision($maxval, 2) . ')';
 
-					switch(count($std_error))
+					switch(count($values))
 					{
 						case 0:
 							$std_error = -1;
+							$std_dev = -1;
 							break;
 						case 1:
 							$std_error = 0;
+							$std_dev = 0;
 							break;
 						default:
-							$std_error = pts_math::standard_error($std_error);
+							$std_error = pts_math::standard_error($values);
+							$std_dev = pts_math::percent_standard_deviation($values);
 							break;
 					}
 				}
@@ -169,10 +179,14 @@ class pts_graph_horizontal_bars extends pts_graph_core
 						}
 					}
 					$bar_offset_34 = round($middle_of_bar + ($this->is_multi_way_comparison ? 0 : ($bar_height / 5) + 1));
-					$this->svg_dom->add_text_element('SE +/- ' . pts_math::set_precision($std_error, 2), array('y' => $bar_offset_34, 'x' => ($this->i['left_start'] - 5)), $g_se);
+					$text_se = 'SE +/- ' . pts_math::set_precision($std_error, 2);
+					$this->svg_dom->add_text_element($text_se, array('y' => $bar_offset_34 - 7, 'x' => ($this->i['left_start'] - 5)), $g_se);
+					$text_sd = 'SD ' . pts_math::set_precision($std_dev, 2) . '%';
+					$this->svg_dom->add_text_element($text_sd, array('y' => $bar_offset_34, 'x' => ($this->i['left_start'] - 5)), $g_se);
 				}
 
-				if((self::text_string_width($value, $this->i['identifier_size']) + 2) < $graph_size)
+				if((self::text_string_width($value, $this->i['identifier_size']) + 2) < $graph_size
+						|| (self::text_string_width($text_min_max, $this->i['identifier_size']) + 2) < $graph_size)
 				{
 					if(isset($this->d['identifier_notes'][$buffer_item->get_result_identifier()]) && $this->i['compact_result_view'] == false && !$this->is_multi_way_comparison)
 					{
@@ -180,12 +194,16 @@ class pts_graph_horizontal_bars extends pts_graph_core
 						$this->svg_dom->add_text_element($this->d['identifier_notes'][$buffer_item->get_result_identifier()], array('x' => ($this->i['left_start'] + 4), 'y' => ($px_bound_top + self::$c['size']['key']), 'font-size' => $note_size, 'fill' => self::$c['color']['body_text'], 'text-anchor' => 'start'));
 					}
 
-					$this->svg_dom->add_text_element($value, array('x' => ($value_end_right - 5), 'y' => $middle_of_bar, 'text-anchor' => 'end'), $g_values);
+					$this->svg_dom->add_text_element($value, array('x' => ($value_end_right - 5), 'y' => $middle_of_bar - 5, 'text-anchor' => 'end'), $g_values);
+					$this->svg_dom->add_text_element($text_min_max, array('x' => ($value_end_right - 5), 'y' => $middle_of_bar + 5, 'text-anchor' => 'end'), $g_values);
 				}
 				else if($value > 0)
 				{
 					// Write it in front of the result
-					$this->svg_dom->add_text_element($value, array('x' => ($value_end_right + 6), 'y' => $middle_of_bar, 'fill' => self::$c['color']['text'], 'text-anchor' => 'start'), $g_values);
+					$this->svg_dom->add_text_element($value, array('x' => ($value_end_right + 6), 'y' => $middle_of_bar - 5, 'fill' => self::$c['color']['text'], 'text-anchor' => 'start'), $g_values);
+					$this->svg_dom->add_text_element($text_min_max, array('x' => ($value_end_right + 6), 'y' => $middle_of_bar + 5, 'fill' => self::$c['color']['text'], 'text-anchor' => 'start'), $g_values);
+
+
 				}
 			}
 		}
